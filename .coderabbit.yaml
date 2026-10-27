@@ -1,0 +1,26 @@
+language: en-US
+
+reviews:
+  profile: chill
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "app/**/*.tsx"
+      instructions: |
+        Review Next.js App Router behavior, including server/client component boundaries,
+        provider placement, route navigation, and loading or error states. Check keyboard
+        accessibility and responsive behavior. Treat the product's seeded financial data
+        as synthetic demonstration data, not real-world claims.
+    - path: "components/**/*.tsx"
+      instructions: |
+        Check React hooks and state for correctness, preserve existing component behavior,
+        and review interactive controls for accessible names, keyboard use, and clear states.
+    - path: "lib/**"
+      instructions: |
+        Prioritize TypeScript correctness, data integrity, validation, and safe browser
+        storage handling. Keep deterministic demo data and its relationships consistent.
+    - path: "app/**/*.css"
+      instructions: |
+        Check layout and theme changes at desktop and mobile widths, including overflow,
+        contrast, keyboard focus visibility, and reduced-motion behavior.
