@@ -92,7 +92,7 @@ export function AuthPage({ initialError, mode }: AuthPageProps) {
             {isSignUp ? (
               <SignUp
                 appearance={authAppearance}
-                forceRedirectUrl="/app/overview"
+                fallbackRedirectUrl="/app/overview"
                 path="/sign-up"
                 routing="path"
                 signInUrl="/sign-in"
@@ -101,6 +101,7 @@ export function AuthPage({ initialError, mode }: AuthPageProps) {
               <SignIn
                 appearance={authAppearance}
                 forceRedirectUrl="/app/overview"
+                fallbackRedirectUrl="/app/overview"
                 path="/sign-in"
                 routing="path"
                 signUpUrl="/sign-up"

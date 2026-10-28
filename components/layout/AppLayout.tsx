@@ -11,9 +11,9 @@ const APP_THEME_STORAGE_KEY = 'riskwatch_app_theme';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const {
-    workspaceReady,
     workspaceSyncStatus,
     workspaceError,
+    workspaceConfigurationMissing,
     retryWorkspaceSync,
   } = useRiskWatch();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -60,26 +60,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onThemeChange={handleThemeChange}
         />
         <main style={{ flex: 1 }}>
-          {!workspaceReady ? (
-            <div className="workspace-loading" role="status" aria-live="polite">
-              Loading your RiskWatch workspace…
-            </div>
-          ) : (
-            <>
-              {workspaceSyncStatus === 'error' && (
-                <div className="workspace-sync-warning" role="alert">
-                  <span>
-                    {workspaceError ||
-                      'Workspace sync is unavailable; changes may not be saved.'}
-                  </span>
-                  <button type="button" onClick={retryWorkspaceSync}>
-                    Retry
-                  </button>
-                </div>
+          {/* Show sync error banner but NEVER block page content */}
+          {workspaceSyncStatus === 'error' && (
+            <div className="workspace-sync-warning" role="alert">
+              <span>
+                {workspaceConfigurationMissing
+                  ? 'Workspace saving needs NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env.local.'
+                  : workspaceError || 'Workspace sync is unavailable; changes may not be saved.'}
+              </span>
+              {!workspaceConfigurationMissing && (
+                <button type="button" onClick={retryWorkspaceSync}>
+                  Retry
+                </button>
               )}
-              {children}
-            </>
+            </div>
           )}
+          {children}
         </main>
       </div>
       <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />

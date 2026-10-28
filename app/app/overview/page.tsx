@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/AppCharts';
 import { formatCurrency, formatDate } from '@/lib/data';
 import { useRiskWatch } from '@/lib/store';
+import { RiskWatchApi } from '@/lib/api/endpoints';
+import { DashboardSummaryDTO } from '@/packages/contracts/src';
 
 export default function OverviewPage() {
   const router = useRouter();
@@ -43,6 +45,24 @@ export default function OverviewPage() {
     auditEvents,
     validationChecks,
   } = useRiskWatch();
+
+  const [liveSummary, setLiveSummary] = React.useState<DashboardSummaryDTO | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    RiskWatchApi.getDashboardSummary()
+      .then((res) => {
+        if (active && res?.data) {
+          setLiveSummary(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Overview] Live dashboard summary fetch fell back to baseline state:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Synthetic 7-day timeline data for the chart
   const timelineData = [
@@ -122,6 +142,14 @@ export default function OverviewPage() {
               {metadata.validationStatus}
             </span>
           </div>
+          {liveSummary && (
+            <div className="dataset-info-item">
+              <span>Database Backend:</span>
+              <span className="badge badge-synthetic" style={{ fontSize: '10px', background: '#E6F4EA', color: '#137333', border: '1px solid #CEEAD6' }}>
+                ● Supabase PostgreSQL Connected
+              </span>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#C7A16B' }}>
@@ -149,9 +177,11 @@ export default function OverviewPage() {
             <span>Customers</span>
             <Users size={16} className="kpi-icon" />
           </div>
-          <div className="kpi-value tabular-nums">{metadata.totalCustomers.toLocaleString()}</div>
+          <div className="kpi-value tabular-nums">
+            {(liveSummary?.totalCustomersCount ?? metadata.totalCustomers).toLocaleString()}
+          </div>
           <div className="kpi-footer">
-            <span className="badge badge-neutral">Baseline Synthetic</span>
+            <span className="badge badge-neutral">{liveSummary ? 'Supabase Synchronized' : 'Baseline Synthetic'}</span>
           </div>
         </div>
 
@@ -160,7 +190,9 @@ export default function OverviewPage() {
             <span>Accounts</span>
             <Wallet size={16} className="kpi-icon" />
           </div>
-          <div className="kpi-value tabular-nums">{metadata.totalAccounts.toLocaleString()}</div>
+          <div className="kpi-value tabular-nums">
+            {(liveSummary?.totalAccountsCount ?? metadata.totalAccounts).toLocaleString()}
+          </div>
           <div className="kpi-footer">
             <span className="badge badge-neutral">Savings, Current, Escrow</span>
           </div>
@@ -183,7 +215,7 @@ export default function OverviewPage() {
             <AlertTriangle size={16} style={{ color: '#D94C42' }} />
           </div>
           <div className="kpi-value tabular-nums" style={{ color: '#D94C42' }}>
-            {metadata.totalAlerts.toLocaleString()}
+            {(liveSummary?.activeAlertsCount ?? metadata.totalAlerts).toLocaleString()}
           </div>
           <div className="kpi-footer">
             <span className="badge badge-critical">{severityCounts.critical} Critical</span>

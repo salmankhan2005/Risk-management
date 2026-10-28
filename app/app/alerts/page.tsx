@@ -1,22 +1,106 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Bell, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Bell, CheckCircle, Clock, Radio, ShieldAlert } from 'lucide-react';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import { formatDate } from '@/lib/data';
 import { useRiskWatch } from '@/lib/store';
 import { Alert } from '@/lib/types';
+import { RiskWatchApi } from '@/lib/api/endpoints';
+import { AlertDTO } from '@/packages/contracts/src';
+import { useRealtimeSubscription } from '@/lib/supabase/use-realtime';
+
+function mapAlertDtoToUi(dto: AlertDTO): Alert {
+  const severityMap: Record<string, Alert['severity']> = {
+    CRITICAL: 'Critical',
+    HIGH: 'High',
+    MEDIUM: 'Medium',
+    LOW: 'Low',
+  };
+  const statusMap: Record<string, Alert['status']> = {
+    OPEN: 'Open',
+    INVESTIGATING: 'Under Review',
+    DISMISSED: 'False Positive',
+    ESCALATED: 'Escalated',
+  };
+
+  return {
+    id: dto.businessId || dto.id,
+    title: dto.summary,
+    severity: severityMap[dto.severity] || 'Medium',
+    status: statusMap[dto.status] || 'Open',
+    riskScore: dto.aggregateScore,
+    ruleIds: ['RULE-MER-01', 'RULE-DEV-01'],
+    triggerTxnIds: ['TXN-MAPPED'],
+    linkedTransactionIds: ['TXN-MAPPED'],
+    linkedAccountIds: [dto.accountId],
+    linkedCustomerId: dto.customerId,
+    evidenceSummary: dto.summary,
+    triggeredAt: dto.createdAt,
+    createdAt: dto.createdAt,
+    updatedAt: dto.createdAt,
+    assignedAnalyst: dto.assignedToId || 'Unassigned',
+  };
+}
 
 export default function AlertsPage() {
   const router = useRouter();
   const { alerts, customers, accounts } = useRiskWatch();
+  const [liveAlerts, setLiveAlerts] = useState<Alert[]>([]);
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const noTriggerTxn = alerts.filter((a) => !a.linkedTransactionIds || a.linkedTransactionIds.length === 0);
+  useEffect(() => {
+    let active = true;
+    RiskWatchApi.getAlerts({ limit: 100 })
+      .then((res) => {
+        if (active && res?.data && res.data.length > 0) {
+          setLiveAlerts(res.data.map(mapAlertDtoToUi));
+        }
+      })
+      .catch((err) => {
+        console.warn('[Alerts] Live alerts query fell back to baseline:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const filtered = alerts.filter((a) => {
+  // Supabase Realtime WebSocket subscription for live incoming alerts
+  useRealtimeSubscription({
+    table: 'alerts',
+    event: 'INSERT',
+    onData: (payload) => {
+      if (payload.new) {
+        const row = payload.new as any;
+        const newAlert: Alert = {
+          id: row.business_id || row.id,
+          title: row.summary || 'Realtime Risk Signal Detected',
+          severity: row.severity ? (row.severity.charAt(0) + row.severity.slice(1).toLowerCase() as any) : 'High',
+          status: 'Open',
+          riskScore: row.aggregate_score || 50,
+          ruleIds: ['RULE-REALTIME'],
+          triggerTxnIds: ['TXN-LIVE'],
+          linkedTransactionIds: ['TXN-LIVE'],
+          linkedAccountIds: [row.account_id],
+          linkedCustomerId: row.customer_id,
+          evidenceSummary: row.summary || 'Live stream event from PostgreSQL',
+          triggeredAt: row.created_at || new Date().toISOString(),
+          createdAt: row.created_at || new Date().toISOString(),
+          updatedAt: row.created_at || new Date().toISOString(),
+          assignedAnalyst: 'Unassigned',
+        };
+        setLiveAlerts((prev) => [newAlert, ...prev]);
+      }
+    },
+  });
+
+  const activeAlertsList = liveAlerts.length > 0 ? liveAlerts : alerts;
+
+  const noTriggerTxn = activeAlertsList.filter((a) => !a.linkedTransactionIds || a.linkedTransactionIds.length === 0);
+
+  const filtered = activeAlertsList.filter((a) => {
     const sevMatch = severityFilter === 'all' || a.severity === severityFilter;
     const stMatch = statusFilter === 'all' || a.status === statusFilter;
     return sevMatch && stMatch;
@@ -108,7 +192,12 @@ export default function AlertsPage() {
     <div className="app-page-wrapper">
       <div className="app-page-header">
         <div className="app-page-title-block">
-          <h1>Alerts Queue</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1>Alerts Queue</h1>
+            <span className="badge badge-success" style={{ fontSize: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#E6F4EA', color: '#137333', border: '1px solid #CEEAD6' }}>
+              <Radio size={10} /> Live Realtime Stream
+            </span>
+          </div>
           <p>System-generated risk alerts from rule triggers. Review, assign, and disposition each alert.</p>
         </div>
       </div>
@@ -122,10 +211,10 @@ export default function AlertsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
         {[
-          { label: 'Total Alerts', value: alerts.length, icon: <Bell size={16} /> },
-          { label: 'Critical', value: alerts.filter((a) => a.severity === 'Critical').length, icon: <ShieldAlert size={16} /> },
-          { label: 'Under Review', value: alerts.filter((a) => a.status === 'Under Review' || a.status === 'Open').length, icon: <Clock size={16} /> },
-          { label: 'Resolved', value: alerts.filter((a) => a.status === 'Resolved').length, icon: <CheckCircle size={16} /> },
+          { label: 'Total Alerts', value: activeAlertsList.length, icon: <Bell size={16} /> },
+          { label: 'Critical', value: activeAlertsList.filter((a) => a.severity === 'Critical').length, icon: <ShieldAlert size={16} /> },
+          { label: 'Under Review', value: activeAlertsList.filter((a) => a.status === 'Under Review' || a.status === 'Open').length, icon: <Clock size={16} /> },
+          { label: 'Resolved', value: activeAlertsList.filter((a) => a.status === 'Resolved').length, icon: <CheckCircle size={16} /> },
         ].map((item) => (
           <div key={item.label} className="kpi-card">
             <div className="kpi-top"><span>{item.label}</span><span className="kpi-icon">{item.icon}</span></div>

@@ -10,8 +10,11 @@ synthetic demo data.
 1. Copy `.env.example` to `.env.local` if you have not already configured the app.
 2. Set the Clerk publishable and secret keys from the selected Clerk application.
    Never expose `CLERK_SECRET_KEY` in browser code or commit `.env.local`.
-3. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-   Do not use a database connection string or service-role key in the browser.
+3. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+   `.env.local`, using the project API URL and publishable key from the Supabase
+   project's API settings. A PostgreSQL database connection string is not a
+   substitute for either value. Never put a database password or service-role key
+   in a `NEXT_PUBLIC_` variable.
 4. In the Clerk Dashboard, enable open sign-up and configure the email verification
    method you want. Add local and production app URLs to Clerk's allowed redirect
    origins.

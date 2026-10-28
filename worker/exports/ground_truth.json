@@ -1,0 +1,37 @@
+[
+  {
+    "entity_type": "transaction",
+    "entity_id": "a9c6b9c8-9af8-5dba-8471-49f2ac3f6112",
+    "is_anomaly": true,
+    "scenario": "ANOMALY-01",
+    "description": "Transaction executed against a terminated/closed account."
+  },
+  {
+    "entity_type": "account",
+    "entity_id": "ecf2c7b4-3708-5a5b-8d8e-4017d26282b9",
+    "is_anomaly": true,
+    "scenario": "ANOMALY-02",
+    "description": "Account maintains negative balance without overdraft facility."
+  },
+  {
+    "entity_type": "transfer_link",
+    "entity_id": "71eafa47-ef9b-5d72-83c2-d829ef194115",
+    "is_anomaly": true,
+    "scenario": "ANOMALY-03",
+    "description": "Transfer source debit leg does not reconcile with destination credit leg."
+  },
+  {
+    "entity_type": "alert",
+    "entity_id": "50bea2f0-07cf-414e-a454-0e8617b42331",
+    "is_anomaly": true,
+    "scenario": "ANOMALY-04",
+    "description": "Alert has no triggering transactions or risk evaluation evidence records."
+  },
+  {
+    "entity_type": "case",
+    "entity_id": "661822df-11f5-45b3-9458-2a00c56f1c1c",
+    "is_anomaly": true,
+    "scenario": "ANOMALY-05",
+    "description": "Case disposition timestamp strictly precedes the initiating alert creation date."
+  }
+]

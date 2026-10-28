@@ -1,0 +1,18 @@
+{
+  "generatorVersion": "1.0.0",
+  "datasetSeed": "20261022",
+  "counts": {
+    "customers": 500,
+    "accounts": 700,
+    "transactions": 5000,
+    "alerts": 894,
+    "cases": 299,
+    "anomalies": 5
+  },
+  "checksums": {
+    "anomaly_manifest.json": "4533b7062205f07c781e0e656a43e799216aa878f1ed4d5da0e5d21c2155e447",
+    "validation_summary.json": "54d58b88bd6bd4a85b264a8d385f58043ea4020d4b402733ac193ccc9c28cc65",
+    "ground_truth.json": "af843b7663405025e1d0ab4944ec449e69ed33a753ef17948b7710577900f66e",
+    "transactions.csv": "bd257f5136bf6da541baa07ca3c7de43fbbe4a2cbd491bcd70b7eb0223cadf01"
+  }
+}

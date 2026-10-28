@@ -15,6 +15,7 @@ grant select, insert, update, delete on table public.user_workspace_state to aut
 
 create policy "Users can read their own workspace state"
   on public.user_workspace_state
+  
   for select
   to authenticated
   using ((select auth.jwt()->>'sub') = user_id);

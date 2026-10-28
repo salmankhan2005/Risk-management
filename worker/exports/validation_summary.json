@@ -1,0 +1,218 @@
+{
+  "datasetSeed": "20261022",
+  "totalChecks": 20,
+  "passedChecks": 15,
+  "failedChecks": 4,
+  "warningChecks": 1,
+  "checks": [
+    {
+      "checkId": "VAL-STR-01",
+      "category": "Structural",
+      "name": "Customer Primary Key Uniqueness",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "All customer records must have distinct unique UUIDs.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-STR-02",
+      "category": "Structural",
+      "name": "Account Customer Reference Integrity",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "Every account must link to a valid existing customer ID.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-STR-03",
+      "category": "Structural",
+      "name": "Transaction Account Reference Integrity",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "Every transaction must reference an existing account record.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-STR-04",
+      "category": "Structural",
+      "name": "Business Identifier Pattern Conformity",
+      "status": "PASS",
+      "severity": "WARNING",
+      "details": "Customer business IDs must strictly adhere to CUS-XXXXXX format.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-BAL-01",
+      "category": "Financial",
+      "name": "Transaction Signed Amount Invariant",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "Debit transactions must have signed_amount = -amount; credit must have signed_amount = amount.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-BAL-02",
+      "category": "Financial",
+      "name": "Unauthorized Overdraft Negative Balance Check",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "details": "Accounts without authorized overdraft facility must never drop below 0.00 balance.",
+      "failedCount": 1,
+      "sampleFailedIds": [
+        "ecf2c7b4-3708-5a5b-8d8e-4017d26282b9"
+      ]
+    },
+    {
+      "checkId": "VAL-BAL-03",
+      "category": "Financial",
+      "name": "Inter-Account Transfer Legs Parity",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "details": "Debit leg of a paired transfer must match the credit leg in amount and currency.",
+      "failedCount": 1,
+      "sampleFailedIds": [
+        "71eafa47-ef9b-5d72-83c2-d829ef194115"
+      ]
+    },
+    {
+      "checkId": "VAL-BAL-04",
+      "category": "Financial",
+      "name": "Positive Transaction Nominal Value",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "Nominal transaction amounts must be strictly positive values.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TMP-01",
+      "category": "Temporal",
+      "name": "Transaction Timestamp Post-Account Creation",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "No transaction can occur prior to the opening timestamp of its target account.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TMP-02",
+      "category": "Temporal",
+      "name": "Terminated Account Inactivity Verification",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "details": "Closed accounts cannot post subsequent financial transactions.",
+      "failedCount": 4,
+      "sampleFailedIds": [
+        "a9c6b9c8-9af8-5dba-8471-49f2ac3f6112",
+        "329794a0-c9f2-5276-acc8-348dd99ee075",
+        "65eb7860-560a-547c-8031-dd68b12fc5e5",
+        "c483dbf7-6100-5d36-8659-173d0ddd2a88"
+      ]
+    },
+    {
+      "checkId": "VAL-TMP-03",
+      "category": "Temporal",
+      "name": "Case Investigation Chronology Verification",
+      "status": "PASS",
+      "severity": "ERROR",
+      "details": "Case resolution and closure timestamps must follow opened timestamp sequentially.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TMP-04",
+      "category": "Temporal",
+      "name": "No Future-Dated Event Ingestion",
+      "status": "PASS",
+      "severity": "WARNING",
+      "details": "Events and transactions must not contain timestamps in the future.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TRC-01",
+      "category": "Traceability",
+      "name": "Alert Account Association Integrity",
+      "status": "PASS",
+      "severity": "CRITICAL",
+      "details": "Every alert must be associated with a valid account record.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TRC-02",
+      "category": "Traceability",
+      "name": "Risk Score Bounded Range Compliance",
+      "status": "PASS",
+      "severity": "ERROR",
+      "details": "Aggregate alert risk score must fall strictly within the interval [0, 100].",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TRC-03",
+      "category": "Traceability",
+      "name": "Case Severity Classification Integrity",
+      "status": "PASS",
+      "severity": "WARNING",
+      "details": "Case severity must use standardized domain enums (LOW, MEDIUM, HIGH, CRITICAL).",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-TRC-04",
+      "category": "Traceability",
+      "name": "Alert Idempotency & Deduplication Invariant",
+      "status": "PASS",
+      "severity": "WARNING",
+      "details": "Alert deduplication keys must prevent multiple duplicate triggers for the same event.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-ISO-01",
+      "category": "Benchmark",
+      "name": "Customer Generation Volume Target",
+      "status": "FAIL",
+      "severity": "INFO",
+      "details": "Current dataset contains 500 generated customers.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-ISO-02",
+      "category": "Benchmark",
+      "name": "Multi-Account Distribution Factor",
+      "status": "PASS",
+      "severity": "INFO",
+      "details": "Current accounts-to-customer ratio is 1.40.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-ISO-03",
+      "category": "Benchmark",
+      "name": "Transaction Feed Density Benchmark",
+      "status": "PASS",
+      "severity": "INFO",
+      "details": "Total transactions generated: 5000.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    },
+    {
+      "checkId": "VAL-ISO-04",
+      "category": "Benchmark",
+      "name": "Alert Generation Selectivity Rate",
+      "status": "WARNING",
+      "severity": "INFO",
+      "details": "Alert selectivity: 17.88% of processed transactions.",
+      "failedCount": 0,
+      "sampleFailedIds": []
+    }
+  ]
+}

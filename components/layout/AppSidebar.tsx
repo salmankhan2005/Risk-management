@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -29,6 +29,7 @@ import { useRiskWatch } from '@/lib/store';
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const { alerts, cases } = useRiskWatch();
 
@@ -79,7 +80,7 @@ export default function AppSidebar() {
     <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
       {/* Sidebar Header with Brand and Collapse Toggle */}
       <div className="sidebar-header">
-        <Link href="/" className="sidebar-brand" title="RiskWatch Home">
+        <Link href="/" className="sidebar-brand" title="RiskWatch Home" prefetch={true}>
           <div className="sidebar-brand-mark">
             <Shield size={18} strokeWidth={2} />
           </div>
@@ -112,8 +113,10 @@ export default function AppSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   className={`sidebar-link ${isActive ? 'active' : ''}`}
                   title={item.label}
+                  onMouseEnter={() => router.prefetch(item.href)}
                 >
                   <Icon size={16} className="sidebar-icon" strokeWidth={1.8} />
                   {!collapsed && <span>{item.label}</span>}

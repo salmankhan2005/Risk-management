@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useUser, UserButton } from '@clerk/nextjs';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -81,6 +82,7 @@ function BrandMark() {
 }
 
 export default function HomePage() {
+  const { isSignedIn } = useUser();
   const [modal, setModal] = useState<'demo' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -141,10 +143,23 @@ export default function HomePage() {
               <Search size={20} strokeWidth={1.8} />
             </button>
             <span className="header-divider" />
-            <Link className="signin-link" href="/sign-in">Sign in</Link>
-            <button className="button button-dark header-cta" type="button" onClick={() => setModal('demo')}>
-              Get Started <ArrowRight size={15} />
-            </button>
+            {isSignedIn ? (
+              <>
+                <Link className="button button-dark header-cta" href="/app/overview" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  Workbench <ArrowRight size={15} />
+                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', marginLeft: '6px' }}>
+                  <UserButton />
+                </div>
+              </>
+            ) : (
+              <>
+                <Link className="signin-link" href="/sign-in">Sign in</Link>
+                <button className="button button-dark header-cta" type="button" onClick={() => setModal('demo')}>
+                  Get Started <ArrowRight size={15} />
+                </button>
+              </>
+            )}
             <button className="mobile-menu-trigger" type="button" aria-label={mobileMenuOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMobileMenuOpen((open) => !open)}>
               {mobileMenuOpen ? <X size={23} /> : <Menu size={23} />}
             </button>

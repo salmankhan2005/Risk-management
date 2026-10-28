@@ -894,27 +894,17 @@ export default function DataExplorerPage() {
       </div>
 
       {/* Tabs */}
-      <div className="app-tabs" style={{ flexWrap: 'wrap' }}>
+      <div className="app-tabs">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             className={`app-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             {tab.icon}
             <span>{tab.label}</span>
-            <span
-              style={{
-                fontSize: '10px',
-                padding: '1px 6px',
-                borderRadius: '10px',
-                background: activeTab === tab.id ? '#10110F' : '#E8E3D9',
-                color: activeTab === tab.id ? '#FAF7F0' : '#4A463E',
-                fontWeight: 700,
-              }}
-            >
+            <span className="app-tab-count">
               {tab.count}
             </span>
           </button>

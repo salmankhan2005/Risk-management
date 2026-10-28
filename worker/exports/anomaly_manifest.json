@@ -1,0 +1,67 @@
+[
+  {
+    "scenarioId": "ANOMALY-01",
+    "scenarioName": "Transaction on Closed Account",
+    "targetEntityType": "transaction",
+    "targetEntityId": "a9c6b9c8-9af8-5dba-8471-49f2ac3f6112",
+    "targetBusinessId": "TXN-2026-00000013",
+    "expectedValidator": "VAL-ACC-01",
+    "expectedResult": "FAIL",
+    "metadata": {
+      "account_id": "449df367-01f8-53a5-941f-2cbb920fb6fa",
+      "closed_at": "2026-08-01T00:00:00+00:00"
+    }
+  },
+  {
+    "scenarioId": "ANOMALY-02",
+    "scenarioName": "Unauthorized Overdraft Negative Balance",
+    "targetEntityType": "account",
+    "targetEntityId": "ecf2c7b4-3708-5a5b-8d8e-4017d26282b9",
+    "targetBusinessId": "ACC-CUS-000009-01",
+    "expectedValidator": "VAL-BAL-02",
+    "expectedResult": "FAIL",
+    "metadata": {
+      "balance": "-12500.50",
+      "allow_overdraft": false
+    }
+  },
+  {
+    "scenarioId": "ANOMALY-03",
+    "scenarioName": "Imbalanced Transfer Legs Reconciliation Failure",
+    "targetEntityType": "transfer_link",
+    "targetEntityId": "71eafa47-ef9b-5d72-83c2-d829ef194115",
+    "targetBusinessId": "TRF-71eafa47-ef9b-5d72-83c2-d829ef194115",
+    "expectedValidator": "VAL-TRF-01",
+    "expectedResult": "FAIL",
+    "metadata": {
+      "discrepancy_amount": "500.00",
+      "status": "IMBALANCED"
+    }
+  },
+  {
+    "scenarioId": "ANOMALY-04",
+    "scenarioName": "Orphan Alert Without Underlying Evidence",
+    "targetEntityType": "alert",
+    "targetEntityId": "50bea2f0-07cf-414e-a454-0e8617b42331",
+    "targetBusinessId": "ALT-2026-999999",
+    "expectedValidator": "VAL-ALT-02",
+    "expectedResult": "FAIL",
+    "metadata": {
+      "alert_id": "50bea2f0-07cf-414e-a454-0e8617b42331",
+      "reason": "No linked rule evaluations"
+    }
+  },
+  {
+    "scenarioId": "ANOMALY-05",
+    "scenarioName": "Case Disposition Predating Trigger Event",
+    "targetEntityType": "case",
+    "targetEntityId": "661822df-11f5-45b3-9458-2a00c56f1c1c",
+    "targetBusinessId": "CASE-2026-999999",
+    "expectedValidator": "VAL-CASE-03",
+    "expectedResult": "FAIL",
+    "metadata": {
+      "case_id": "661822df-11f5-45b3-9458-2a00c56f1c1c",
+      "closed_at": "2026-08-02T10:00:00+00:00"
+    }
+  }
+]

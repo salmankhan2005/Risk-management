@@ -247,7 +247,7 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
           >
             <option value="riskwatch">Warm</option>
             <option value="monochrome">Monochrome</option>
-            <option value="smoky">Smoky Graphite</option>
+            <option value="smoky">Smoky</option>
           </select>
         </label>
 
@@ -260,9 +260,9 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
             onChange={handleRoleChange}
             title="Demonstration Role Switcher"
           >
-            <option value="Operations Analyst">Role: Operations Analyst</option>
-            <option value="Risk/Compliance Reviewer">Role: Risk/Compliance Reviewer</option>
-            <option value="System Administrator">Role: System Administrator</option>
+            <option value="Operations Analyst">Operations Analyst</option>
+            <option value="Risk/Compliance Reviewer">Compliance Reviewer</option>
+            <option value="System Administrator">System Administrator</option>
           </select>
         </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -18,26 +18,76 @@ import DataTable, { Column } from '@/components/ui/DataTable';
 import { formatCurrency, formatDate } from '@/lib/data';
 import { useRiskWatch } from '@/lib/store';
 import { Transaction, TransactionDirection, TransactionType } from '@/lib/types';
+import { RiskWatchApi } from '@/lib/api/endpoints';
+import { TransactionDTO } from '@/packages/contracts/src';
+
+function mapTxnDtoToUi(dto: TransactionDTO): Transaction {
+  const numAmount = typeof dto.amount === 'number' ? dto.amount : parseFloat(String(dto.amount || '0'));
+  const numSigned = typeof dto.signedAmount === 'number' ? dto.signedAmount : parseFloat(String(dto.signedAmount || '0'));
+  const numBefore = typeof dto.balanceBefore === 'number' ? dto.balanceBefore : parseFloat(String(dto.balanceBefore || '0'));
+  const numAfter = typeof dto.balanceAfter === 'number' ? dto.balanceAfter : parseFloat(String(dto.balanceAfter || '0'));
+
+  const isDebit = dto.type === 'DEBIT' || numSigned < 0;
+  const currency = (['INR', 'USD', 'EUR', 'GBP'].includes(dto.currency) ? dto.currency : 'INR') as Transaction['currency'];
+
+  return {
+    id: dto.businessId || dto.id,
+    customerId: 'CUS-000001',
+    accountId: dto.accountId,
+    amount: numAmount,
+    currency,
+    type: isDebit ? 'Withdrawal' : 'Deposit',
+    direction: isDebit ? 'Debit' : 'Credit',
+    status: dto.status === 'POSTED' ? 'Settled' : 'Blocked',
+    riskScore: numAmount > 100000 ? 85 : numAmount > 50000 ? 55 : 20,
+    triggeredRules: numAmount > 100000 ? ['RULE-LRG-01'] : [],
+    timestamp: dto.occurredAt,
+    balanceBefore: numBefore,
+    balanceAfter: numAfter,
+    description: dto.description || `${dto.type} Transaction`,
+    merchantId: dto.merchantId || undefined,
+    deviceId: dto.deviceId || undefined,
+  };
+}
 
 export default function TransactionsPage() {
   const router = useRouter();
   const { transactions } = useRiskWatch();
+  const [liveTxns, setLiveTxns] = useState<Transaction[]>([]);
 
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [directionFilter, setDirectionFilter] = useState<string>('ALL');
   const [minRisk, setMinRisk] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
+  useEffect(() => {
+    let active = true;
+    RiskWatchApi.getTransactions({ limit: 100 })
+      .then((res) => {
+        if (active && res?.data && res.data.length > 0) {
+          setLiveTxns(res.data.map(mapTxnDtoToUi));
+        }
+      })
+      .catch((err) => {
+        console.warn('[Transactions] Live transactions fetch fell back to baseline:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const activeTxnsList = liveTxns.length > 0 ? liveTxns : transactions;
+
   // Multi-column filtering
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
+    return activeTxnsList.filter((t) => {
       if (typeFilter !== 'ALL' && t.type !== typeFilter) return false;
       if (directionFilter !== 'ALL' && t.direction !== directionFilter) return false;
       if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
       if (t.riskScore < minRisk) return false;
       return true;
     });
-  }, [transactions, typeFilter, directionFilter, statusFilter, minRisk]);
+  }, [activeTxnsList, typeFilter, directionFilter, statusFilter, minRisk]);
 
   const columns: Column<Transaction>[] = [
     {

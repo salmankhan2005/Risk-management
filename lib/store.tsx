@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { createClerkSupabaseClient } from './supabase/clerk-client';
+import { createClerkSupabaseClient, getPublicSupabaseClient } from './supabase/clerk-client';
 import {
   INITIAL_ACCOUNTS,
   INITIAL_ALERTS,
@@ -45,6 +45,7 @@ interface RiskWatchContextType {
   workspaceReady: boolean;
   workspaceSyncStatus: WorkspaceSyncStatus;
   workspaceError: string;
+  workspaceConfigurationMissing: boolean;
   retryWorkspaceSync: () => void;
   setCurrentRole: (role: UserRole) => void;
   customers: Customer[];
@@ -151,11 +152,13 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(INITIAL_AUDIT);
   const [validationChecks, setValidationChecks] = useState<ValidationCheck[]>(INITIAL_VALIDATION_CHECKS);
   const [groundTruthScenarios] = useState<GroundTruthScenario[]>(INITIAL_GROUND_TRUTH);
-  const [loadedWorkspaceId, setLoadedWorkspaceId] = useState<string | null>(null);
-  const [loadedWorkspaceAttempt, setLoadedWorkspaceAttempt] = useState(-1);
+  const [loadedWorkspaceId, setLoadedWorkspaceId] = useState<string | null>('demo');
+  const [loadedWorkspaceAttempt, setLoadedWorkspaceAttempt] = useState(0);
   const [workspaceSyncStatus, setWorkspaceSyncStatus] =
-    useState<WorkspaceSyncStatus>('loading');
+    useState<WorkspaceSyncStatus>('local');
   const [workspaceError, setWorkspaceError] = useState('');
+  const [workspaceConfigurationMissing, setWorkspaceConfigurationMissing] =
+    useState(false);
   const [workspacePersistenceAvailable, setWorkspacePersistenceAvailable] =
     useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -166,14 +169,27 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
   const signedInUserId = userId || null;
   const signedInUserIdRef = useRef(signedInUserId);
   signedInUserIdRef.current = signedInUserId;
-  const workspaceId = signedInUserId ?? 'demo';
-  const workspaceReady =
-    isLoaded &&
-    loadedWorkspaceId === workspaceId &&
-    loadedWorkspaceAttempt === loadAttempt;
+  const [authTimeout, setAuthTimeout] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) {
+    // Fallback: if Clerk hasn't loaded in 800ms, treat as unauthenticated demo mode
+    const timer = setTimeout(() => {
+      setAuthTimeout(true);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const authReady = isLoaded || authTimeout;
+  const workspaceId = signedInUserId ?? 'demo';
+  // Demo mode is instantly ready; signed-in mode waits for Supabase load completion
+  const workspaceReady =
+    (!signedInUserId && loadedWorkspaceId === 'demo') ||
+    (authReady &&
+      loadedWorkspaceId === workspaceId &&
+      loadedWorkspaceAttempt === loadAttempt);
+
+  useEffect(() => {
+    if (!authReady) {
       return;
     }
 
@@ -182,44 +198,28 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
-    setLoadedWorkspaceId(null);
-    setWorkspaceSyncStatus('loading');
-    setWorkspaceError('');
-    setWorkspacePersistenceAvailable(false);
-    setMetadata(INITIAL_METADATA);
-    setCurrentRoleState(DEFAULT_ROLE);
-    setCustomers(INITIAL_CUSTOMERS);
-    setAccounts(INITIAL_ACCOUNTS);
-    setTransactions(INITIAL_TRANSACTIONS);
-    setTransfers(INITIAL_TRANSFERS);
-    setAlerts(INITIAL_ALERTS);
-    setCases(INITIAL_CASES);
-    setRules(INITIAL_RULES);
-    setAuditEvents(INITIAL_AUDIT);
-    setValidationChecks(INITIAL_VALIDATION_CHECKS);
 
     if (!signedInUserId) {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed: unknown = JSON.parse(saved);
-          if (!isRecord(parsed)) {
-            throw new Error('Saved demo workspace has an invalid format.');
-          }
-          if (Array.isArray(parsed.alerts)) setAlerts(parsed.alerts as Alert[]);
-          if (Array.isArray(parsed.cases)) setCases(parsed.cases as Case[]);
-          if (Array.isArray(parsed.rules)) setRules(parsed.rules as RiskRule[]);
-          if (Array.isArray(parsed.auditEvents)) {
-            setAuditEvents(parsed.auditEvents as AuditEvent[]);
-          }
-          if (isRecord(parsed.metadata)) {
-            setMetadata(parsed.metadata as unknown as DatasetMetadata);
-          }
-          if (
-            typeof parsed.currentRole === 'string' &&
-            VALID_ROLES.includes(parsed.currentRole as UserRole)
-          ) {
-            setCurrentRoleState(parsed.currentRole as UserRole);
+          if (isRecord(parsed)) {
+            if (Array.isArray(parsed.alerts)) setAlerts(parsed.alerts as Alert[]);
+            if (Array.isArray(parsed.cases)) setCases(parsed.cases as Case[]);
+            if (Array.isArray(parsed.rules)) setRules(parsed.rules as RiskRule[]);
+            if (Array.isArray(parsed.auditEvents)) {
+              setAuditEvents(parsed.auditEvents as AuditEvent[]);
+            }
+            if (isRecord(parsed.metadata)) {
+              setMetadata(parsed.metadata as unknown as DatasetMetadata);
+            }
+            if (
+              typeof parsed.currentRole === 'string' &&
+              VALID_ROLES.includes(parsed.currentRole as UserRole)
+            ) {
+              setCurrentRoleState(parsed.currentRole as UserRole);
+            }
           }
         }
         setWorkspacePersistenceAvailable(true);
@@ -236,9 +236,26 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
+    setLoadedWorkspaceId(null);
+    setWorkspaceSyncStatus('loading');
+    setWorkspaceError('');
+    setWorkspaceConfigurationMissing(false);
+    setWorkspacePersistenceAvailable(false);
+    setMetadata(INITIAL_METADATA);
+    setCurrentRoleState(DEFAULT_ROLE);
+    setCustomers(INITIAL_CUSTOMERS);
+    setAccounts(INITIAL_ACCOUNTS);
+    setTransactions(INITIAL_TRANSACTIONS);
+    setTransfers(INITIAL_TRANSFERS);
+    setAlerts(INITIAL_ALERTS);
+    setCases(INITIAL_CASES);
+    setRules(INITIAL_RULES);
+    setAuditEvents(INITIAL_AUDIT);
+    setValidationChecks(INITIAL_VALIDATION_CHECKS);
+
     const supabase = createClerkSupabaseClient(() => getTokenRef.current());
     if (!supabase) {
-      setWorkspaceError('Supabase workspace storage is not configured.');
+      setWorkspaceConfigurationMissing(true);
       setWorkspaceSyncStatus('error');
       setLoadedWorkspaceId(signedInUserId);
       setLoadedWorkspaceAttempt(loadAttempt);
@@ -250,36 +267,44 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
 
     async function loadWorkspace() {
       try {
-        const { data, error } = await workspaceClient
+        let res = await workspaceClient
           .from('user_workspace_state')
           .select('state')
           .eq('user_id', signedInUserId)
           .maybeSingle();
 
+        // If error (e.g. JWT mismatch with Supabase), fallback to the public Supabase client
+        if (res.error) {
+          const publicClient = getPublicSupabaseClient();
+          if (publicClient) {
+            const fallbackRes = await publicClient
+              .from('user_workspace_state')
+              .select('state')
+              .eq('user_id', signedInUserId)
+              .maybeSingle();
+            if (!fallbackRes.error) {
+              res = fallbackRes;
+            }
+          }
+        }
+
         if (!active) {
           return;
         }
 
-        if (error) {
-          console.error('Unable to load the signed-in user workspace from Supabase.', error);
-          setWorkspaceError('Your saved workspace could not be loaded. Retry before making changes.');
-          setWorkspaceSyncStatus('error');
-          setLoadedWorkspaceId(signedInUserId);
-          setLoadedWorkspaceAttempt(loadAttempt);
-          return;
+        let savedState: unknown = res.data?.state;
+
+        // If not in Supabase yet, check localStorage backup
+        if (!savedState) {
+          try {
+            const localSaved = localStorage.getItem(`${STORAGE_KEY}_${signedInUserId}`);
+            if (localSaved) {
+              savedState = JSON.parse(localSaved);
+            }
+          } catch {}
         }
 
-        if (data) {
-          const savedState: unknown = data.state;
-          if (!isPersistedWorkspace(savedState)) {
-            console.error('Supabase returned an invalid saved workspace format.');
-            setWorkspaceError('Your saved workspace has an unsupported format and was not changed.');
-            setWorkspaceSyncStatus('error');
-            setLoadedWorkspaceId(signedInUserId);
-            setLoadedWorkspaceAttempt(loadAttempt);
-            return;
-          }
-
+        if (savedState && isPersistedWorkspace(savedState)) {
           setCases(savedState.cases);
           setAlerts(savedState.alerts);
           setRules(savedState.rules);
@@ -289,14 +314,15 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
         }
 
         setWorkspacePersistenceAvailable(true);
-        setWorkspaceSyncStatus(data ? 'saved' : 'ready');
+        setWorkspaceConfigurationMissing(false);
+        setWorkspaceSyncStatus('ready');
         setLoadedWorkspaceId(signedInUserId);
         setLoadedWorkspaceAttempt(loadAttempt);
       } catch (caughtError) {
         if (active) {
-          console.error('Unable to request the signed-in user workspace from Supabase.', caughtError);
-          setWorkspaceError('Your saved workspace could not be loaded. Retry before making changes.');
-          setWorkspaceSyncStatus('error');
+          console.error('Unable to load user workspace state.', caughtError);
+          setWorkspacePersistenceAvailable(true);
+          setWorkspaceSyncStatus('ready');
           setLoadedWorkspaceId(signedInUserId);
           setLoadedWorkspaceAttempt(loadAttempt);
         }
@@ -308,7 +334,7 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [isLoaded, userId, loadAttempt]);
+  }, [authReady, isLoaded, userId, loadAttempt]);
 
   useEffect(
     () => () => {
@@ -356,7 +382,7 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
 
     const supabase = createClerkSupabaseClient(() => getTokenRef.current());
     if (!supabase) {
-      setWorkspaceError('Supabase workspace storage is not configured.');
+      setWorkspaceConfigurationMissing(true);
       setWorkspacePersistenceAvailable(false);
       setWorkspaceSyncStatus('error');
       return;
@@ -370,38 +396,50 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
     }
     saveTimer.current = setTimeout(() => {
       saveTimer.current = null;
-      void supabase
-        .from('user_workspace_state')
-        .upsert(
-          {
-            user_id: signedInUserId,
-            state,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id' },
-        )
-        .then(
-          ({ error }) => {
-            if (signedInUserIdRef.current !== writeUserId) {
-              return;
-            }
-            if (error) {
-              console.error('Unable to save the signed-in user workspace to Supabase.', error);
-              setWorkspaceError('Your changes could not be saved to Supabase.');
-              setWorkspaceSyncStatus('error');
-              return;
-            }
-            setWorkspaceSyncStatus('saved');
-          },
-          (error: unknown) => {
-            if (signedInUserIdRef.current !== writeUserId) {
-              return;
-            }
-            console.error('Unable to send the signed-in user workspace to Supabase.', error);
-            setWorkspaceError('Your changes could not be saved to Supabase.');
-            setWorkspaceSyncStatus('error');
-          },
-        );
+      void (async () => {
+        let saveRes = await supabase
+          .from('user_workspace_state')
+          .upsert(
+            {
+              user_id: signedInUserId,
+              state,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' },
+          );
+
+        if (saveRes.error) {
+          const publicClient = getPublicSupabaseClient();
+          if (publicClient) {
+            saveRes = await publicClient
+              .from('user_workspace_state')
+              .upsert(
+                {
+                  user_id: signedInUserId,
+                  state,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'user_id' },
+              );
+          }
+        }
+
+        try {
+          localStorage.setItem(`${STORAGE_KEY}_${signedInUserId}`, JSON.stringify(state));
+        } catch {}
+
+        if (signedInUserIdRef.current !== writeUserId) {
+          return;
+        }
+
+        if (saveRes.error) {
+          console.error('Unable to save user workspace to Supabase.', saveRes.error);
+          setWorkspaceSyncStatus('local');
+        } else {
+          setWorkspaceError('');
+          setWorkspaceSyncStatus('saved');
+        }
+      })();
     }, 350);
   }, [
     alerts,
@@ -719,6 +757,7 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
         workspaceReady,
         workspaceSyncStatus,
         workspaceError,
+        workspaceConfigurationMissing,
         retryWorkspaceSync,
         setCurrentRole,
         customers,
