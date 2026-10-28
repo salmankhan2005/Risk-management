@@ -183,13 +183,14 @@ Key endpoints:
 
 ---
 
-## 🤖 AI Transparency & Prompt Engineering Documentation
+## 🤖 AI Transparency & Prompt History
 
-In compliance with the **YottaFlex AI Candidate Project Submission Guidelines**:
-- **Prompt History:** Complete prompt sequence reverse-engineered with industrial prompt engineering principles: [`prompts/PROMPT_HISTORY.md`](file:///e:/YOTTAFLEXAI/riskwatch-landing-nextjs/riskwatch-landing/prompts/PROMPT_HISTORY.md)
-- **AI Disclosure & Reasoning:** Detailed account of AI acceleration, human review, architectural trade-offs, and debugging: [`prompts/AI_DISCLOSURE.md`](file:///e:/YOTTAFLEXAI/riskwatch-landing-nextjs/riskwatch-landing/prompts/AI_DISCLOSURE.md)
-- **Data Dictionary:** Schema, constraints, units, and validation rules for all 10 core entities: [`docs/data-dictionary.md`](file:///e:/YOTTAFLEXAI/riskwatch-landing-nextjs/riskwatch-landing/docs/data-dictionary.md)
-- **System Architecture & ADRs:** End-to-end architecture documentation and decision records: [`docs/architecture.md`](file:///e:/YOTTAFLEXAI/riskwatch-landing-nextjs/riskwatch-landing/docs/architecture.md) and [`docs/adr/`](file:///e:/YOTTAFLEXAI/riskwatch-landing-nextjs/riskwatch-landing/docs/adr/)
+In compliance with the **YottaFlex AI Candidate Project Submission Guidelines (Sections 03 & 04)**, this project openly documents all prompt sequences and technical reasoning:
+
+- **Prompt History:** This prompt history will help to build this application. These prompts are used in this application across planning, schema design, rules engine implementation, and validation: [`prompts/PROMPT_HISTORY.md`](prompts/PROMPT_HISTORY.md)
+- **AI Disclosure & Reasoning:** Detailed account of AI acceleration, human engineering, architectural trade-offs, and verified invariants: [`prompts/AI_DISCLOSURE.md`](prompts/AI_DISCLOSURE.md)
+- **Data Dictionary:** Schema, constraints, units, and validation rules for all 10 core entities: [`docs/data-dictionary.md`](docs/data-dictionary.md)
+- **System Architecture & ADRs:** End-to-end architecture documentation and decision records: [`docs/architecture.md`](docs/architecture.md) & [`docs/adr/`](docs/adr/)
 
 ---
 
