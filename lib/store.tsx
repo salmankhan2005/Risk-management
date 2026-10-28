@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { createClerkSupabaseClient } from './supabase/clerk-client';
 import {
   INITIAL_ACCOUNTS,
   INITIAL_ALERTS,
@@ -40,6 +42,10 @@ interface RiskWatchContextType {
   metadata: DatasetMetadata;
   currentUser: string;
   currentRole: UserRole;
+  workspaceReady: boolean;
+  workspaceSyncStatus: WorkspaceSyncStatus;
+  workspaceError: string;
+  retryWorkspaceSync: () => void;
   setCurrentRole: (role: UserRole) => void;
   customers: Customer[];
   accounts: Account[];
@@ -88,14 +94,51 @@ interface RiskWatchContextType {
   resetToDefaults: () => void;
 }
 
+type WorkspaceSyncStatus = 'loading' | 'ready' | 'local' | 'saving' | 'saved' | 'error';
+
+interface PersistedWorkspace {
+  cases: Case[];
+  alerts: Alert[];
+  rules: RiskRule[];
+  auditEvents: AuditEvent[];
+  metadata: DatasetMetadata;
+  currentRole: UserRole;
+}
+
 const RiskWatchContext = createContext<RiskWatchContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'riskwatch_state_v1';
+const DEFAULT_ROLE: UserRole = 'Operations Analyst';
+const VALID_ROLES: UserRole[] = [
+  'Operations Analyst',
+  'Risk/Compliance Reviewer',
+  'System Administrator',
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPersistedWorkspace(value: unknown): value is PersistedWorkspace {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.cases) &&
+    Array.isArray(value.alerts) &&
+    Array.isArray(value.rules) &&
+    Array.isArray(value.auditEvents) &&
+    isRecord(value.metadata) &&
+    typeof value.currentRole === 'string' &&
+    VALID_ROLES.includes(value.currentRole as UserRole)
+  );
+}
 
 export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
+  const { getToken, isLoaded, userId } = useAuth();
+  const { user } = useUser();
   const [metadata, setMetadata] = useState<DatasetMetadata>(INITIAL_METADATA);
-  const [currentUser] = useState<string>('Neha Sen');
-  const [currentRole, setCurrentRoleState] = useState<UserRole>('Operations Analyst');
+  const currentUser =
+    user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Neha Sen';
+  const [currentRole, setCurrentRoleState] = useState<UserRole>(DEFAULT_ROLE);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
@@ -108,48 +151,274 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(INITIAL_AUDIT);
   const [validationChecks, setValidationChecks] = useState<ValidationCheck[]>(INITIAL_VALIDATION_CHECKS);
   const [groundTruthScenarios] = useState<GroundTruthScenario[]>(INITIAL_GROUND_TRUTH);
+  const [loadedWorkspaceId, setLoadedWorkspaceId] = useState<string | null>(null);
+  const [loadedWorkspaceAttempt, setLoadedWorkspaceAttempt] = useState(-1);
+  const [workspaceSyncStatus, setWorkspaceSyncStatus] =
+    useState<WorkspaceSyncStatus>('loading');
+  const [workspaceError, setWorkspaceError] = useState('');
+  const [workspacePersistenceAvailable, setWorkspacePersistenceAvailable] =
+    useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [saveAttempt, setSaveAttempt] = useState(0);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const signedInUserId = userId || null;
+  const signedInUserIdRef = useRef(signedInUserId);
+  signedInUserIdRef.current = signedInUserId;
+  const workspaceId = signedInUserId ?? 'demo';
+  const workspaceReady =
+    isLoaded &&
+    loadedWorkspaceId === workspaceId &&
+    loadedWorkspaceAttempt === loadAttempt;
 
-  // Load from local storage on initial mount if available
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.alerts) setAlerts(parsed.alerts);
-        if (parsed.cases) setCases(parsed.cases);
-        if (parsed.rules) setRules(parsed.rules);
-        if (parsed.auditEvents) setAuditEvents(parsed.auditEvents);
-        if (parsed.metadata) setMetadata(parsed.metadata);
-        if (parsed.currentRole) setCurrentRoleState(parsed.currentRole);
-      }
-    } catch {
-      // ignore
+    if (!isLoaded) {
+      return;
     }
-  }, []);
 
-  // Save changes to local storage
-  const persistState = (newCases = cases, newAlerts = alerts, newRules = rules, newAudits = auditEvents, newMeta = metadata, role = currentRole) => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          cases: newCases,
-          alerts: newAlerts,
-          rules: newRules,
-          auditEvents: newAudits,
-          metadata: newMeta,
-          currentRole: role,
-        })
-      );
-    } catch {
-      // ignore
+    let active = true;
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    setLoadedWorkspaceId(null);
+    setWorkspaceSyncStatus('loading');
+    setWorkspaceError('');
+    setWorkspacePersistenceAvailable(false);
+    setMetadata(INITIAL_METADATA);
+    setCurrentRoleState(DEFAULT_ROLE);
+    setCustomers(INITIAL_CUSTOMERS);
+    setAccounts(INITIAL_ACCOUNTS);
+    setTransactions(INITIAL_TRANSACTIONS);
+    setTransfers(INITIAL_TRANSFERS);
+    setAlerts(INITIAL_ALERTS);
+    setCases(INITIAL_CASES);
+    setRules(INITIAL_RULES);
+    setAuditEvents(INITIAL_AUDIT);
+    setValidationChecks(INITIAL_VALIDATION_CHECKS);
+
+    if (!signedInUserId) {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed: unknown = JSON.parse(saved);
+          if (!isRecord(parsed)) {
+            throw new Error('Saved demo workspace has an invalid format.');
+          }
+          if (Array.isArray(parsed.alerts)) setAlerts(parsed.alerts as Alert[]);
+          if (Array.isArray(parsed.cases)) setCases(parsed.cases as Case[]);
+          if (Array.isArray(parsed.rules)) setRules(parsed.rules as RiskRule[]);
+          if (Array.isArray(parsed.auditEvents)) {
+            setAuditEvents(parsed.auditEvents as AuditEvent[]);
+          }
+          if (isRecord(parsed.metadata)) {
+            setMetadata(parsed.metadata as unknown as DatasetMetadata);
+          }
+          if (
+            typeof parsed.currentRole === 'string' &&
+            VALID_ROLES.includes(parsed.currentRole as UserRole)
+          ) {
+            setCurrentRoleState(parsed.currentRole as UserRole);
+          }
+        }
+        setWorkspacePersistenceAvailable(true);
+        setWorkspaceSyncStatus('local');
+      } catch (error) {
+        console.error('Unable to load the local demo workspace.', error);
+        setWorkspaceError('The local demo workspace could not be loaded or saved.');
+        setWorkspaceSyncStatus('error');
+      }
+      setLoadedWorkspaceId('demo');
+      setLoadedWorkspaceAttempt(loadAttempt);
+      return () => {
+        active = false;
+      };
+    }
+
+    const supabase = createClerkSupabaseClient(() => getTokenRef.current());
+    if (!supabase) {
+      setWorkspaceError('Supabase workspace storage is not configured.');
+      setWorkspaceSyncStatus('error');
+      setLoadedWorkspaceId(signedInUserId);
+      setLoadedWorkspaceAttempt(loadAttempt);
+      return () => {
+        active = false;
+      };
+    }
+    const workspaceClient = supabase;
+
+    async function loadWorkspace() {
+      try {
+        const { data, error } = await workspaceClient
+          .from('user_workspace_state')
+          .select('state')
+          .eq('user_id', signedInUserId)
+          .maybeSingle();
+
+        if (!active) {
+          return;
+        }
+
+        if (error) {
+          console.error('Unable to load the signed-in user workspace from Supabase.', error);
+          setWorkspaceError('Your saved workspace could not be loaded. Retry before making changes.');
+          setWorkspaceSyncStatus('error');
+          setLoadedWorkspaceId(signedInUserId);
+          setLoadedWorkspaceAttempt(loadAttempt);
+          return;
+        }
+
+        if (data) {
+          const savedState: unknown = data.state;
+          if (!isPersistedWorkspace(savedState)) {
+            console.error('Supabase returned an invalid saved workspace format.');
+            setWorkspaceError('Your saved workspace has an unsupported format and was not changed.');
+            setWorkspaceSyncStatus('error');
+            setLoadedWorkspaceId(signedInUserId);
+            setLoadedWorkspaceAttempt(loadAttempt);
+            return;
+          }
+
+          setCases(savedState.cases);
+          setAlerts(savedState.alerts);
+          setRules(savedState.rules);
+          setAuditEvents(savedState.auditEvents);
+          setMetadata(savedState.metadata);
+          setCurrentRoleState(savedState.currentRole);
+        }
+
+        setWorkspacePersistenceAvailable(true);
+        setWorkspaceSyncStatus(data ? 'saved' : 'ready');
+        setLoadedWorkspaceId(signedInUserId);
+        setLoadedWorkspaceAttempt(loadAttempt);
+      } catch (caughtError) {
+        if (active) {
+          console.error('Unable to request the signed-in user workspace from Supabase.', caughtError);
+          setWorkspaceError('Your saved workspace could not be loaded. Retry before making changes.');
+          setWorkspaceSyncStatus('error');
+          setLoadedWorkspaceId(signedInUserId);
+          setLoadedWorkspaceAttempt(loadAttempt);
+        }
+      }
+    }
+
+    void loadWorkspace();
+
+    return () => {
+      active = false;
+    };
+  }, [isLoaded, userId, loadAttempt]);
+
+  useEffect(
+    () => () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+      }
+    },
+    [],
+  );
+
+  const retryWorkspaceSync = () => {
+    if (workspacePersistenceAvailable) {
+      setSaveAttempt((attempt) => attempt + 1);
+    } else {
+      setLoadAttempt((attempt) => attempt + 1);
     }
   };
+
+  useEffect(() => {
+    if (!workspaceReady || !workspacePersistenceAvailable) {
+      return;
+    }
+
+    const state: PersistedWorkspace = {
+      cases,
+      alerts,
+      rules,
+      auditEvents,
+      metadata,
+      currentRole,
+    };
+
+    if (!signedInUserId) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        setWorkspaceError('');
+        setWorkspaceSyncStatus('local');
+      } catch (error) {
+        console.error('Unable to save the local demo workspace.', error);
+        setWorkspaceError('The local demo workspace could not be saved.');
+        setWorkspaceSyncStatus('error');
+      }
+      return;
+    }
+
+    const supabase = createClerkSupabaseClient(() => getTokenRef.current());
+    if (!supabase) {
+      setWorkspaceError('Supabase workspace storage is not configured.');
+      setWorkspacePersistenceAvailable(false);
+      setWorkspaceSyncStatus('error');
+      return;
+    }
+
+    setWorkspaceSyncStatus('saving');
+    setWorkspaceError('');
+    const writeUserId = signedInUserId;
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      void supabase
+        .from('user_workspace_state')
+        .upsert(
+          {
+            user_id: signedInUserId,
+            state,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        )
+        .then(
+          ({ error }) => {
+            if (signedInUserIdRef.current !== writeUserId) {
+              return;
+            }
+            if (error) {
+              console.error('Unable to save the signed-in user workspace to Supabase.', error);
+              setWorkspaceError('Your changes could not be saved to Supabase.');
+              setWorkspaceSyncStatus('error');
+              return;
+            }
+            setWorkspaceSyncStatus('saved');
+          },
+          (error: unknown) => {
+            if (signedInUserIdRef.current !== writeUserId) {
+              return;
+            }
+            console.error('Unable to send the signed-in user workspace to Supabase.', error);
+            setWorkspaceError('Your changes could not be saved to Supabase.');
+            setWorkspaceSyncStatus('error');
+          },
+        );
+    }, 350);
+  }, [
+    alerts,
+    auditEvents,
+    cases,
+    currentRole,
+    metadata,
+    rules,
+    signedInUserId,
+    saveAttempt,
+    workspacePersistenceAvailable,
+    workspaceReady,
+  ]);
 
   const setCurrentRole = (role: UserRole) => {
     setCurrentRoleState(role);
     logAuditEvent('ROLE_SWITCH', 'UserSession', currentUser, `Role: ${currentRole}`, `Role: ${role}`, 'Analyst demonstration role switch');
-    persistState(cases, alerts, rules, auditEvents, metadata, role);
   };
 
   const logAuditEvent = (
@@ -211,19 +480,16 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
     };
     const updated = [newEvent, ...auditEvents];
     setAuditEvents(updated);
-    persistState(cases, alerts, rules, updated);
   };
 
   const updateAlert = (alertId: string, patch: Partial<Alert>) => {
     const updated = alerts.map((a) => (a.id === alertId ? { ...a, ...patch } : a));
     setAlerts(updated);
-    persistState(cases, updated);
   };
 
   const updateCase = (caseId: string, patch: Partial<Case>) => {
     const updated = cases.map((c) => (c.id === caseId ? { ...c, ...patch } : c));
     setCases(updated);
-    persistState(updated);
   };
 
   const updateAlertStatus = (alertId: string, status: AlertStatus, notes?: string) => {
@@ -249,7 +515,6 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       `Status: ${status}`,
       notes || 'Status triage updated by analyst'
     );
-    persistState(cases, updated);
   };
 
   const createCase = (caseData: Omit<Case, 'id' | 'createdAt' | 'history'>): Case => {
@@ -293,7 +558,6 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       `Title: ${created.title}, Severity: ${created.severity}`,
       'Initiated from operational triage review'
     );
-    persistState(updatedCases);
     return created;
   };
 
@@ -339,7 +603,6 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       `Status: ${status}, Disposition: ${disposition || 'Preserved'}`,
       notes || 'Analyst lifecycle progression'
     );
-    persistState(updated);
   };
 
   const addCaseNote = (caseId: string, note: string) => {
@@ -365,7 +628,6 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
     });
     setCases(updated);
     logAuditEvent('CASE_NOTE_ADDED', 'Case', caseId, 'Note count: N', 'Note count: N+1', note);
-    persistState(updated);
   };
 
   const updateRule = (ruleId: string, updates: Partial<RiskRule>) => {
@@ -379,7 +641,6 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       `Modified keys: ${Object.keys(updates).join(', ')}`,
       'Threshold parameter tuned in simulator'
     );
-    persistState(cases, alerts, updated);
   };
 
   const runValidation = () => {
@@ -424,14 +685,17 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
       `Seed: ${seed}, Mode: ${volumeMode}, TxnCount: ${newMeta.totalTransactions}`,
       'Deterministic re-compilation with fixed seed'
     );
-    persistState(cases, alerts, rules, auditEvents, newMeta);
   };
 
   const resetToDefaults = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
+    if (!signedInUserId) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.error('Unable to clear the local demo workspace.', error);
+        setWorkspaceError('The local demo workspace could not be cleared.');
+        setWorkspaceSyncStatus('error');
+      }
     }
     setMetadata(INITIAL_METADATA);
     setCustomers(INITIAL_CUSTOMERS);
@@ -443,7 +707,7 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
     setRules(INITIAL_RULES);
     setAuditEvents(INITIAL_AUDIT);
     setValidationChecks(INITIAL_VALIDATION_CHECKS);
-    setCurrentRoleState('Operations Analyst');
+    setCurrentRoleState(DEFAULT_ROLE);
   };
 
   return (
@@ -452,6 +716,10 @@ export function RiskWatchProvider({ children }: { children: React.ReactNode }) {
         metadata,
         currentUser,
         currentRole,
+        workspaceReady,
+        workspaceSyncStatus,
+        workspaceError,
+        retryWorkspaceSync,
         setCurrentRole,
         customers,
         accounts,

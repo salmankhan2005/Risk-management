@@ -81,7 +81,7 @@ function BrandMark() {
 }
 
 export default function HomePage() {
-  const [modal, setModal] = useState<'demo' | 'signin' | null>(null);
+  const [modal, setModal] = useState<'demo' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -128,11 +128,11 @@ export default function HomePage() {
           <BrandMark />
 
           <nav className={`desktop-nav ${mobileMenuOpen ? 'nav-open' : ''}`} aria-label="Main navigation">
-            <a href="#platform" onClick={() => setMobileMenuOpen(false)}>Product <ChevronDown size={12} /></a>
-            <a href="#capabilities" onClick={() => setMobileMenuOpen(false)}>Solutions <ChevronDown size={12} /></a>
+            <a href="#monitoring" onClick={() => setMobileMenuOpen(false)}>Product <ChevronDown size={12} /></a>
+            <a href="#signals" onClick={() => setMobileMenuOpen(false)}>Solutions <ChevronDown size={12} /></a>
             <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>Use Cases <ChevronDown size={12} /></a>
             <a href="#governance" onClick={() => setMobileMenuOpen(false)}>Security <ChevronDown size={12} /></a>
-            <a href="#evaluation" onClick={() => setMobileMenuOpen(false)}>Methodology</a>
+            <a href="#validation" onClick={() => setMobileMenuOpen(false)}>Methodology</a>
             <a href="#resources" onClick={() => setMobileMenuOpen(false)}>Resources <ChevronDown size={12} /></a>
           </nav>
 
@@ -141,7 +141,7 @@ export default function HomePage() {
               <Search size={20} strokeWidth={1.8} />
             </button>
             <span className="header-divider" />
-            <button className="signin-link" type="button" onClick={() => setModal('signin')}>Sign in</button>
+            <Link className="signin-link" href="/sign-in">Sign in</Link>
             <button className="button button-dark header-cta" type="button" onClick={() => setModal('demo')}>
               Get Started <ArrowRight size={15} />
             </button>
@@ -211,6 +211,69 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="product-showcase page-gutter" id="monitoring" aria-labelledby="monitoring-title">
+        <div className="product-showcase-media">
+          <figure className="product-preview-frame">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/riskwatch-overview-preview.jpg"
+              alt="RiskWatch overview dashboard with synthetic customer, account, transaction, alert, and case metrics alongside activity and risk charts"
+              width={1440}
+              height={900}
+              loading="lazy"
+            />
+            <figcaption>Operational overview · Synthetic dataset · Seed 20261022</figcaption>
+          </figure>
+        </div>
+        <div className="product-showcase-copy">
+          <h2 id="monitoring-title">See the ledger in context.</h2>
+          <p>
+            Move from portfolio-level activity to the records behind a risk signal. The overview brings
+            transaction volume, alert severity, rule activity, and open investigations into one working view.
+          </p>
+          <dl className="showcase-facts">
+            <div><dt>100,000</dt><dd>synthetic transactions</dd></div>
+            <div><dt>1,000</dt><dd>seeded alert records</dd></div>
+            <div><dt>7 days</dt><dd>activity timeline</dd></div>
+          </dl>
+          <Link className="text-link" href="/app/overview">
+            Explore the overview <ArrowUpRight size={16} />
+          </Link>
+        </div>
+      </section>
+
+      <section className="signal-showcase" id="signals" aria-labelledby="signals-title">
+        <div className="signal-showcase-inner page-gutter">
+          <div className="signal-showcase-copy">
+            <h2 id="signals-title">A risk score should lead to facts.</h2>
+            <p>
+              Inspect the transaction, its account and customer links, balance movement, status, and the rules
+              that contributed to its score. Filters help narrow the ledger without hiding the underlying record.
+            </p>
+            <ul className="signal-list">
+              <li><strong>Velocity spikes</strong><span>Repeated activity inside a short time window.</span></li>
+              <li><strong>New-device activity</strong><span>Transactions associated with unfamiliar device patterns.</span></li>
+              <li><strong>Circular transfers</strong><span>Linked transfer paths across multiple accounts.</span></li>
+              <li><strong>Dormant reactivation</strong><span>Activity returning after an extended quiet period.</span></li>
+            </ul>
+            <Link className="text-link" href="/app/transactions">
+              Inspect the transaction ledger <ArrowUpRight size={16} />
+            </Link>
+          </div>
+          <figure className="product-preview-frame signal-preview">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/riskwatch-transactions-preview.jpg"
+              alt="RiskWatch transaction workspace showing filters and synthetic ledger rows with customer and account IDs, risk scores, triggered rules, and transaction statuses"
+              width={1440}
+              height={900}
+              loading="lazy"
+            />
+            <figcaption>Transaction investigation workspace · Synthetic records</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section className="workflow-section page-gutter" id="how-it-works">
         <div className="workflow-intro">
           <p className="section-eyebrow">A CLEAR LINE FROM SIGNAL TO DECISION</p>
@@ -241,6 +304,39 @@ export default function HomePage() {
             <span className="step-foot"><Check size={14} /> Traceable outcomes</span>
           </article>
         </div>
+      </section>
+
+      <section className="validation-showcase page-gutter" id="validation" aria-labelledby="validation-title">
+        <div className="validation-showcase-copy">
+          <h2 id="validation-title">Test beyond the happy path.</h2>
+          <p>
+            The Validation Lab checks record integrity and reports deliberately planted negative scenarios
+            separately from clean assertions. Exceptions stay visible and traceable instead of being mistaken
+            for ordinary data.
+          </p>
+          <div className="validation-metrics" aria-label="Synthetic validation baseline">
+            <div><strong>20</strong><span>integrity assertions</span></div>
+            <div><strong>14</strong><span>baseline checks passed</span></div>
+            <div><strong>5</strong><span>documented anomaly scenarios</span></div>
+          </div>
+          <p className="validation-note">
+            The demo labels expected negative checks explicitly; counts can differ when the selected dataset changes.
+          </p>
+          <Link className="text-link" href="/app/validation">
+            Open the Validation Lab <ArrowUpRight size={16} />
+          </Link>
+        </div>
+        <figure className="product-preview-frame validation-preview">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/riskwatch-validation-preview.jpg"
+            alt="RiskWatch Validation Lab showing total assertions, passed checks, controlled failures, warning count, and a detailed foreign-key integrity result"
+            width={1440}
+            height={900}
+            loading="lazy"
+          />
+          <figcaption>Validation results · Expected exceptions are labeled</figcaption>
+        </figure>
       </section>
 
       <section className="governance-section" id="governance">
@@ -318,31 +414,18 @@ export default function HomePage() {
           <section className="action-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
             <button type="button" className="dialog-close icon-button" onClick={() => setModal(null)} aria-label="Close dialog"><X size={19} /></button>
             <div className="dialog-mark"><Shield size={26} strokeWidth={1.6} /></div>
-            {modal === 'demo' ? (
-              <>
-                <p className="section-eyebrow">RISKWATCH / LIVE WORKSPACE</p>
-                <h2 id="dialog-title">Explore the risk workflow.</h2>
-                <p className="dialog-copy">The full monitoring workspace is live. Explore 100,000 synthetic transactions, 1,000 alerts, case workflows, transparent rules, and the validation lab.</p>
-                <div className="dialog-preview-stats">
-                  <span><strong>100,000</strong><small>Transactions</small></span>
-                  <span><strong>1,000</strong><small>Alerts</small></span>
-                  <span><strong>5</strong><small>Edge-case types</small></span>
-                </div>
-                <Link className="button button-dark dialog-primary" href="/app/overview" onClick={() => setModal(null)}>
-                  Enter Operational Workspace <ArrowRight size={16} />
-                </Link>
-                <p className="dialog-footnote">Illustrative synthetic data only. No live financial connections.</p>
-              </>
-            ) : (
-              <>
-                <p className="section-eyebrow">RISKWATCH / ACCESS</p>
-                <h2 id="dialog-title">Workspace access</h2>
-                <p className="dialog-copy">The workspace is publicly accessible for demonstration purposes. Click below to enter the operational dashboard directly.</p>
-                <Link className="button button-dark dialog-primary" href="/app/overview" onClick={() => setModal(null)}>
-                  Enter Workspace <ArrowRight size={16} />
-                </Link>
-              </>
-            )}
+            <p className="section-eyebrow">RISKWATCH / LIVE WORKSPACE</p>
+            <h2 id="dialog-title">Explore the risk workflow.</h2>
+            <p className="dialog-copy">The full monitoring workspace is live. Explore 100,000 synthetic transactions, 1,000 alerts, case workflows, transparent rules, and the validation lab.</p>
+            <div className="dialog-preview-stats">
+              <span><strong>100,000</strong><small>Transactions</small></span>
+              <span><strong>1,000</strong><small>Alerts</small></span>
+              <span><strong>5</strong><small>Edge-case types</small></span>
+            </div>
+            <Link className="button button-dark dialog-primary" href="/app/overview" onClick={() => setModal(null)}>
+              Enter Operational Workspace <ArrowRight size={16} />
+            </Link>
+            <p className="dialog-footnote">Illustrative synthetic data only. No live financial connections.</p>
           </section>
         </div>
       )}

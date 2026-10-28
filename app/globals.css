@@ -95,6 +95,206 @@ button { color: inherit; }
 .capability-arrow { display: none; }
 .capability-item:hover .capability-text h2 { color: #e2c193; }
 
+/* Product previews */
+.product-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, .75fr);
+  align-items: center;
+  gap: clamp(44px, 7vw, 104px);
+  padding-top: clamp(76px, 9vw, 132px);
+  padding-bottom: clamp(76px, 9vw, 132px);
+  background: #f4f0e8;
+}
+
+.product-showcase-media,
+.product-showcase-copy,
+.signal-showcase-copy,
+.validation-showcase-copy {
+  min-width: 0;
+}
+
+.product-preview-frame {
+  width: 100%;
+  margin: 0;
+  padding: 10px;
+  background: #e8e2d8;
+}
+
+.product-preview-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 8 / 5;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.product-preview-frame figcaption {
+  padding: 10px 4px 2px;
+  color: #716b62;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.product-showcase-copy h2,
+.signal-showcase-copy h2,
+.validation-showcase-copy h2 {
+  max-width: 590px;
+  margin: 18px 0 20px;
+  font-family: var(--display);
+  font-size: clamp(38px, 4vw, 58px);
+  font-weight: 600;
+  letter-spacing: -.045em;
+  line-height: .98;
+}
+
+.product-showcase-copy > p:not(.section-eyebrow),
+.signal-showcase-copy > p:not(.section-eyebrow),
+.validation-showcase-copy > p:not(.section-eyebrow) {
+  max-width: 540px;
+  color: #5f5b54;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.showcase-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 30px 0;
+}
+
+.showcase-facts div,
+.validation-metrics div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.showcase-facts dt {
+  font-family: var(--display);
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+
+.showcase-facts dd {
+  margin: 0;
+  color: #716b62;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.signal-showcase {
+  color: #f2eee5;
+  background: #11120f;
+}
+
+.signal-showcase-inner {
+  display: grid;
+  grid-template-columns: minmax(310px, .85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(48px, 8vw, 116px);
+  padding-top: clamp(76px, 9vw, 132px);
+  padding-bottom: clamp(76px, 9vw, 132px);
+}
+
+.signal-showcase-copy h2 {
+  max-width: 500px;
+}
+
+.signal-showcase-copy > p:not(.section-eyebrow) {
+  color: #c5c0b6;
+}
+
+.signal-list {
+  display: grid;
+  gap: 2px;
+  margin: 28px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signal-list li {
+  display: grid;
+  grid-template-columns: minmax(130px, .8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  padding: 12px 13px;
+  background: #191a16;
+}
+
+.signal-list li:nth-child(even) {
+  background: #20211c;
+}
+
+.signal-list strong {
+  color: #f3eee4;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.signal-list span {
+  color: #b7b2a8;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.signal-showcase .product-preview-frame {
+  background: #292a25;
+}
+
+.signal-showcase .product-preview-frame figcaption {
+  color: #c5c0b6;
+}
+
+.validation-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(46px, 7vw, 96px);
+  padding-top: clamp(76px, 9vw, 132px);
+  padding-bottom: clamp(76px, 9vw, 132px);
+  background: #e9e2d7;
+}
+
+.validation-showcase-copy h2 {
+  max-width: 540px;
+}
+
+.validation-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 28px 0 14px;
+}
+
+.validation-metrics strong {
+  font-family: var(--display);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+
+.validation-metrics span {
+  color: #625d55;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.validation-note {
+  margin: 0 0 25px;
+  color: #777065 !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+.validation-preview {
+  background: #d7d0c5;
+}
+
 /* Scrollable landing-page continuation */
 .workflow-section { background: #f8f5ee; display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(55px, 8vw, 126px); padding-top: 116px; padding-bottom: 124px; }
 .workflow-intro { max-width: 475px; }
@@ -211,6 +411,13 @@ kbd { padding: 2px 5px; border: 1px solid #d6cdc0; border-radius: 4px; backgroun
   .capability-content { grid-template-columns: 40px minmax(0,1fr); gap: 13px; }
   .capability-number { margin-left: 53px; }
   .workflow-section { grid-template-columns: 1fr; gap: 55px; padding-top: 80px; padding-bottom: 85px; }
+  .product-showcase,
+  .signal-showcase-inner,
+  .validation-showcase { grid-template-columns: 1fr; gap: 38px; padding-top: 78px; padding-bottom: 82px; }
+  .signal-showcase-copy { order: 1; }
+  .signal-preview { order: 2; }
+  .product-showcase-copy,
+  .validation-showcase-copy { max-width: 720px; }
   .workflow-intro { max-width: 640px; }
   .workflow-intro h2 { font-size: 58px; }
   .governance-inner { grid-template-columns: 1fr; gap: 35px; padding-top: 65px; padding-bottom: 65px; }
@@ -255,6 +462,24 @@ kbd { padding: 2px 5px; border: 1px solid #d6cdc0; border-radius: 4px; backgroun
   .capability-text h2 { font-size: 17px; margin-bottom: 8px; }
   .capability-text p { font-size: 10px; line-height: 1.6; }
   .workflow-section { padding-top: 65px; padding-bottom: 67px; gap: 40px; }
+  .product-showcase,
+  .signal-showcase-inner,
+  .validation-showcase { gap: 28px; padding-top: 60px; padding-bottom: 62px; }
+  .product-showcase-copy h2,
+  .signal-showcase-copy h2,
+  .validation-showcase-copy h2 { font-size: 42px; margin: 16px 0; }
+  .product-preview-frame { padding: 6px; }
+  .product-preview-frame figcaption { padding: 8px 3px 2px; font-size: 13px; }
+  .showcase-facts,
+  .validation-metrics { gap: 10px; margin-top: 22px; }
+  .showcase-facts dt { font-size: 23px; }
+  .showcase-facts dd,
+  .validation-metrics span { font-size: 13px; }
+  .validation-metrics strong { font-size: 30px; }
+  .signal-list { gap: 2px; margin: 22px 0; }
+  .signal-list li { grid-template-columns: 1fr; gap: 3px; padding: 10px 11px; }
+  .signal-list strong,
+  .signal-list span { font-size: 13px; }
   .section-eyebrow { font-size: 8px; letter-spacing: .14em; }
   .workflow-intro h2, .governance-inner h2 { font-size: 44px; margin-top: 18px; }
   .workflow-lead { font-size: 12px; }

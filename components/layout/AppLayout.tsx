@@ -4,25 +4,36 @@ import React, { useEffect, useState } from 'react';
 import AppSidebar from './AppSidebar';
 import AppTopBar from './AppTopBar';
 import GlobalSearchModal from './GlobalSearchModal';
+import { useRiskWatch } from '@/lib/store';
+
+type AppTheme = 'riskwatch' | 'monochrome' | 'smoky';
+const APP_THEME_STORAGE_KEY = 'riskwatch_app_theme';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const {
+    workspaceReady,
+    workspaceSyncStatus,
+    workspaceError,
+    retryWorkspaceSync,
+  } = useRiskWatch();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [theme, setTheme] = useState<'riskwatch' | 'monochrome'>('riskwatch');
+  const [theme, setTheme] = useState<AppTheme>('riskwatch');
 
   useEffect(() => {
     try {
-      if (localStorage.getItem('riskwatch_app_theme') === 'monochrome') {
-        setTheme('monochrome');
+      const savedTheme = localStorage.getItem(APP_THEME_STORAGE_KEY);
+      if (savedTheme === 'riskwatch' || savedTheme === 'monochrome' || savedTheme === 'smoky') {
+        setTheme(savedTheme);
       }
     } catch (error) {
       console.error('Unable to load the saved app theme.', error);
     }
   }, []);
 
-  const handleThemeChange = (nextTheme: 'riskwatch' | 'monochrome') => {
+  const handleThemeChange = (nextTheme: AppTheme) => {
     setTheme(nextTheme);
     try {
-      localStorage.setItem('riskwatch_app_theme', nextTheme);
+      localStorage.setItem(APP_THEME_STORAGE_KEY, nextTheme);
     } catch (error) {
       console.error('Unable to save the selected app theme.', error);
     }
@@ -48,7 +59,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           theme={theme}
           onThemeChange={handleThemeChange}
         />
-        <main style={{ flex: 1 }}>{children}</main>
+        <main style={{ flex: 1 }}>
+          {!workspaceReady ? (
+            <div className="workspace-loading" role="status" aria-live="polite">
+              Loading your RiskWatch workspace…
+            </div>
+          ) : (
+            <>
+              {workspaceSyncStatus === 'error' && (
+                <div className="workspace-sync-warning" role="alert">
+                  <span>
+                    {workspaceError ||
+                      'Workspace sync is unavailable; changes may not be saved.'}
+                  </span>
+                  <button type="button" onClick={retryWorkspaceSync}>
+                    Retry
+                  </button>
+                </div>
+              )}
+              {children}
+            </>
+          )}
+        </main>
       </div>
       <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>

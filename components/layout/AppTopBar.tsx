@@ -14,18 +14,25 @@ import {
   Shield,
   UserCheck,
 } from 'lucide-react';
+import { UserButton, useUser } from '@clerk/nextjs';
 import { useRiskWatch } from '@/lib/store';
 import { UserRole } from '@/lib/types';
 
 interface AppTopBarProps {
   onOpenSearch: () => void;
-  theme: 'riskwatch' | 'monochrome';
-  onThemeChange: (theme: 'riskwatch' | 'monochrome') => void;
+  theme: 'riskwatch' | 'monochrome' | 'smoky';
+  onThemeChange: (theme: 'riskwatch' | 'monochrome' | 'smoky') => void;
 }
 
 export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTopBarProps) {
   const pathname = usePathname();
-  const { currentUser, currentRole, setCurrentRole, alerts } = useRiskWatch();
+  const { isSignedIn } = useUser();
+  const {
+    currentRole,
+    setCurrentRole,
+    alerts,
+    workspaceSyncStatus,
+  } = useRiskWatch();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Compute breadcrumbs
@@ -90,7 +97,7 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
             borderRadius: '6px',
             border: '1px solid #D9D1C4',
           }}
-          className="hidden md:flex"
+          className="app-date-window hidden md:flex"
         >
           <Calendar size={13} color="#AD7048" />
           <span>Oct 15 - Oct 22, 2026</span>
@@ -111,6 +118,7 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
             letterSpacing: '0.06em',
             color: '#8C6A34',
           }}
+          className="app-environment-badge"
         >
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C7A16B' }} />
           SYNTHETIC DATA
@@ -157,6 +165,7 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
 
           {notificationsOpen && (
             <div
+              className="notification-popover"
               style={{
                 position: 'absolute',
                 right: 0,
@@ -195,6 +204,7 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
                   <Link
                     key={al.id}
                     href={`/app/alerts/${al.id}`}
+                    className="notification-item"
                     onClick={() => setNotificationsOpen(false)}
                     style={{
                       display: 'block',
@@ -230,13 +240,14 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
             value={theme}
             onChange={(event) => {
               const nextTheme = event.target.value;
-              if (nextTheme === 'riskwatch' || nextTheme === 'monochrome') {
+              if (nextTheme === 'riskwatch' || nextTheme === 'monochrome' || nextTheme === 'smoky') {
                 onThemeChange(nextTheme);
               }
             }}
           >
             <option value="riskwatch">Warm</option>
             <option value="monochrome">Monochrome</option>
+            <option value="smoky">Smoky Graphite</option>
           </select>
         </label>
 
@@ -254,6 +265,25 @@ export default function AppTopBar({ onOpenSearch, theme, onThemeChange }: AppTop
             <option value="System Administrator">Role: System Administrator</option>
           </select>
         </div>
+
+        {isSignedIn ? (
+          <div className="workspace-account">
+            <span className="workspace-save-status" role="status">
+              {workspaceSyncStatus === 'saving'
+                ? 'Saving…'
+                : workspaceSyncStatus === 'saved'
+                  ? 'Saved'
+                  : workspaceSyncStatus === 'error'
+                    ? 'Not synced'
+                    : 'Workspace'}
+            </span>
+            <UserButton />
+          </div>
+        ) : (
+          <Link className="workspace-sign-in" href="/sign-in">
+            Sign in to save
+          </Link>
+        )}
       </div>
     </header>
   );
