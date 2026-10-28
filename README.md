@@ -122,17 +122,23 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 5. Running the Python Background Worker
-```bash
-# Set Python path to worker package
-$env:PYTHONPATH="worker/src"
+### 5. Running the Test Suites
 
-# Run pytest unit and integration test suite
+Execute all system invariant, schema, and Python worker unit tests:
+
+```bash
+# 1. Run Node.js contract & ledger invariant test suite + TypeScript typecheck
+npm test
+
+# 2. Run Python worker risk rules, determinism & validation test suite
 pytest worker/tests
 
-# Verify bit-for-bit dataset reproducibility (Seed: 20261022)
+# 3. Verify cryptographic bit-for-bit dataset reproducibility (Seed: 20261022)
 python -m riskwatch_worker.cli test-reproducibility
+```
 
+### 6. Running the Python Background Worker (Batch Generation & Queues)
+```bash
 # Generate full synthetic dataset and stream to Supabase
 python -m riskwatch_worker.cli generate --seed 20261022 --customers 500 --accounts 700 --transactions 5000
 
